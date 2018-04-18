@@ -60,6 +60,9 @@
 
 (define (list-size alist) (list-size-helper alist 0))
 
+
+
+
 (define (nth-item num alist) 
     (cond 
         ((equal? num 1) (car alist))
@@ -80,6 +83,9 @@
     )
 )
 
+
+
+
 (define (exists? a alist)
     (cond
         ((null? alist) #f)
@@ -87,6 +93,9 @@
         (#t (exists? a (cdr alist)))
     )
 )
+
+
+
 
 (define (find-adjacentcy a b alist) 
     (cond
@@ -98,6 +107,9 @@
 )
 
 (define (is-adjacent? a b) (find-adjacentcy a b adjacency-map))
+
+
+
 
 (define (contains? alist a) 
     (cond
@@ -117,18 +129,19 @@
 
 (define (get-children alist) (get-children-helper alist 1 2 (list-size alist)))
 
+(define (get-children-level level)
+    (cond
+        ((null? (cdr level)) (get-children (car (car level))))
+        (#t (cons (get-children (car (car level))) (get-children-level (cdr level))))
+    )
+)
+
+
 (define (is-goal-state? alist)
     (cond
         ((null? (cdr alist)) #t)
         ((is-adjacent? (car alist) (car (cdr alist))) (is-goal-state? (cdr alist)))
         (#t #f)
-    )
-)
-
-(define (get-children-level level)
-    (cond
-        ((null? (cdr level)) (get-children (car (car level))))
-        (#t (cons (get-children (car (car level))) (get-children-level (cdr level))))
     )
 )
 
@@ -149,14 +162,35 @@
     )
 )
 
-
-(define (dfs-helper frontier complete-level visited)    
+(define (dfs-helper frontier levels complete-path visited current-depth deepness)    
+    (display frontier)
+    (newline)
     (cond
-        ((null? complete-level) #f)
-        ((null? frontier) (dfs-helper (get-children-level (unvisited complete-level visited)) (get-children-level (unvisited complete-level visited)) (append visited (get-pure-states (unvisited complete-level visited)))))
-        ((is-goal-state? (car (car frontier))) (car (car frontier)))
-        (#t (dfs-helper (cdr frontier) complete-level visited))
+        ;if frontier is ever null, we need to pick a new depth
+        ((null? frontier) #f)
+
+        ;If head of frontier is goal state, return a list with it and the path we took to get there
+        ((is-goal-state? (car (car frontier))) (append (car (car frontier)) (cons (cdr (car frontier)) complete-path)))
+
+        ;Expand leftmost child element if it has not been visited yet as well as add it to visited list 
+        ((and (not (equal? current-depth deepness)) (not (contains? visited (car (car frontier))))) (dfs-helper (get-children (car (car frontier))) (cons (cdr frontier) levels) (cons (cdr (car frontier)) complete-path) (append visited (car (car frontier))) (+ 1 current-depth) deepness))
+        
+        ;If we are not at designated depth yet and the leftmost element has already been visited, move to the next element to the right on the same level
+        ((not (equal? current-depth deepness)) (dfs-helper (cdr frontier) levels complete-path visited current-depth deepness)) 
+    
+        ;head is not a goal state, but current level is empty so we need to go back up level
+        ((null? (cdr frontier)) (dfs-helper (car levels) (cdr levels) (cdr complete-path) visited ( - current-depth 1) deepness))  
+
+        ;head is not a goal state, but current level still 
+        (#t (dfs-helper (cdr frontier) levels complete-path visited current-depth deepness))
     )
 )
 
-(define (dfs frontier) (dfs-helper (list (list frontier)) (list (list frontier)) '()))
+;(define (deepining frontier levels complete-path visited current-depth deepness)
+ ;   (cond
+  ;      ((dfs-helper frontier complete-level visited current-depth deepness) #t)
+   ;     (#t (deepining frontier complete-level visited current-depth (+ 1 deepness)))        
+    ;)
+;)
+
+(define (dis frontier) (dfs-helper (list (list frontier)) '() '() '() 1 4))
