@@ -1,10 +1,3 @@
-; Dante Dalla Gasperina
-; COEN 266
-; HW 2
-; Note: I tried to group/organize functions as nicely as possible depnding on what type of function they were. Also, my A* implementation is
-; at the bottom.
-
-
 
 ; The data in the form of an adjacency map
 
@@ -61,9 +54,11 @@
     (Wyoming Idaho Montana South-Dakota Nebraska Colorado Utah)
   ))
 
+
+
 ;--------------------------------------------------------------------
- 
-; helper funtion to find the size of a list
+  
+; 
 (define (list-size-helper alist num)
   (cond
       ((null? alist) num)
@@ -71,12 +66,10 @@
   )
 )
 
-; wrapper function to find the size of a list
 (define (list-size alist) (list-size-helper alist 0))
 
 ;--------------------------------------------------------------------
 
-; find the nth item in a list, starting from the left of the list
 (define (nth-item num alist) 
     (cond 
         ((equal? num 1) (car alist))
@@ -84,7 +77,6 @@
     ) 
 )
 
-; replace the nth item of a list with another item
 (define (replace-nth-item index alist num)
         (cond 
             ((equal? index 1) (cons num (cdr alist)))
@@ -92,7 +84,6 @@
         ) 
 )
 
-; swap two elements by replacing them with each other's respective element
 (define (swap-elements a b alist) 
     (let ((temp (nth-item a alist)))
         (replace-nth-item b (replace-nth-item a alist (nth-item b alist)) temp)
@@ -101,7 +92,6 @@
 
 ;--------------------------------------------------------------------
 
-; checks to see if an item 'a' is in a list
 (define (exists? a alist)
     (cond
         ((null? alist) #f)
@@ -112,7 +102,6 @@
 
 ;--------------------------------------------------------------------
 
-; helper function to check to see if two lists are adjacent
 (define (find-adjacentcy a b alist) 
     (cond
         ((null? alist) #f)
@@ -122,12 +111,21 @@
     )
 )
 
-;wrapper function to check adjacency between two lists
 (define (is-adjacent? a b) (find-adjacentcy a b adjacency-map))
+
 
 ;--------------------------------------------------------------------
 
-; helper function to get potential children of a list after a swap
+(define (contains? alist a) 
+    (cond
+        ((null? alist) #f)
+        ((equal? (car alist) a) #t)
+        (#t (contains? (cdr alist) a))
+    )
+)
+
+;--------------------------------------------------------------------
+
 (define (get-children-helper alist i j num)
         (cond
             ((and (equal? i (- num 1)) (equal? j num)) (list (list (swap-elements i j alist) (list i j))))
@@ -136,12 +134,17 @@
         )
 )
 
-; wrapper function to get potential children of a list after a swap
 (define (get-children alist) (get-children-helper alist 1 2 (list-size alist)))
+
+(define (get-children-level level)
+    (cond
+        ((null? (cdr level)) (get-children (car (car level))))
+        (#t (cons (get-children (car (car level))) (get-children-level (cdr level))))
+    )
+)
 
 ;--------------------------------------------------------------------
 
-; checks to see whether the current list is a goal state
 (define (is-goal-state? alist)
     (cond
         ((null? (cdr alist)) #t)
@@ -152,7 +155,6 @@
 
 ;--------------------------------------------------------------------
 
-; takes a list and returns a list of all of the unvisited elements of the passed-in list
 (define (unvisited alist visited)
   
     (cond
@@ -165,8 +167,6 @@
 
 ;--------------------------------------------------------------------
 
-; gets a list with only states of the list we are switching and not the switches themselves to make the visited list not depend on switches
-; that were used to reach each state
 (define (get-pure-states alist)
     (cond 
         ((null? (cdr alist)) (car (car alist)))
@@ -176,7 +176,6 @@
 
 ;--------------------------------------------------------------------
 
-; reverses the path list to display steps taken left to right
 (define (reverse-path-helper a rest reversed)
     (cond 
         ((null? rest) (append reversed a))
@@ -184,13 +183,11 @@
     )
 )
 
-; wrapper function to reverse path list
 (define (reverse-path a rest) (reverse-path-helper a rest '()))
 
 ;--------------------------------------------------------------------
 
-
-(define (id-dfs-helper frontier levels complete-path visited current-depth deepness)    
+(define (dis-helper frontier levels complete-path visited current-depth deepness)    
     (cond
         ;if frontier is ever null, we need to pick a new depth
         ((null? frontier) #f)
@@ -199,44 +196,40 @@
         ((is-goal-state? (car (car frontier))) (list (car (car frontier)) (reverse-path (cdr (car frontier)) complete-path)))
 
         ;Expand leftmost child element if it has not been visited yet as well as add it to visited list 
-        ((and (not (equal? current-depth deepness)) (not (contains? visited (car (car frontier))))) (id-dfs-helper (get-children (car (car frontier))) (cons (cdr frontier) levels) (cons (cdr (car frontier)) complete-path) (cons (car (car frontier)) visited) (+ 1 current-depth) deepness))
+        ((and (not (equal? current-depth deepness)) (not (contains? visited (car (car frontier))))) (dis-helper (get-children (car (car frontier))) (cons (cdr frontier) levels) (cons (cdr (car frontier)) complete-path) (cons (car (car frontier)) visited) (+ 1 current-depth) deepness))
         
         ;If we are not at designated depth yet and the leftmost element has already been visited, move to the next element to the right on the same level
-        ((not (equal? current-depth deepness)) (id-dfs-helper (cdr frontier) levels complete-path visited current-depth deepness)) 
+        ((not (equal? current-depth deepness)) (dis-helper (cdr frontier) levels complete-path visited current-depth deepness)) 
     
         ;head is not a goal state, but current level is empty so we need to go back up level
-        ((null? (cdr frontier)) (id-dfs-helper (car levels) (cdr levels) (cdr complete-path) visited ( - current-depth 1) deepness))  
+        ((null? (cdr frontier)) (dis-helper (car levels) (cdr levels) (cdr complete-path) visited ( - current-depth 1) deepness))  
 
         ;head is not a goal state, but current level still 
-        (#t (id-dfs-helper (cdr frontier) levels complete-path visited current-depth deepness))
+        (#t (dis-helper (cdr frontier) levels complete-path visited current-depth deepness))
     )
 )
 
 ; a wrapper function to deal with increasing depth of search
-(define (id-dfs-iteration frontier levels complete-path visited current-depth deepness) 
-    (let ((found (id-dfs-helper frontier levels complete-path visited current-depth deepness)))
+(define (dis-iteration frontier levels complete-path visited current-depth deepness) 
+    (let ((found (dis-helper frontier levels complete-path visited current-depth deepness)))
         (cond 
             (found found)
-            (#t (id-dfs-deepening frontier levels complete-path visited (+ 1 current-depth) deepness))
+            (#t (deepining frontier levels complete-path visited (+ 1 current-depth) deepness))
         )
     )    
 )
 
 ; a wrapper function used to check bounds of the current depth and the final depth and decide when to deduce there is no possible way of achieving the goal
-(define (id-dfs-deepening frontier levels complete-path visited current-depth deepness)
+(define (deepining frontier levels complete-path visited current-depth deepness)
     (cond
         ((equal? deepness 1) (list (car (car frontier)) '()))
         ((equal? current-depth deepness) #f)
-        (#t (id-dfs-iteration frontier levels complete-path visited current-depth deepness))
+        (#t (dis-iteration frontier levels complete-path visited current-depth deepness))
     )
 )
 
 ; wrapper funtion for dis search
-(define (id-dfs frontier) (id-dfs-deepening (list (list frontier)) '() '() '() 1 (list-size frontier)))
-
-
-
-
+(define (id-dfs frontier) (deepining (list (list frontier)) '() '() '() 1 (list-size frontier)))
 
 
 ; -----------------------------------------------------------------------------------------------------------------------------------------------
