@@ -206,17 +206,21 @@
     )
 )
 
+(define (dis-iteration frontier levels complete-path visited current-depth deepness) 
+    (let ((found (dis-helper frontier levels complete-path visited current-depth deepness)))
+        (cond 
+            (found found)
+            (#t (deepining frontier levels complete-path visited (+ 1 current-depth) deepness))
+        )
+    )    
+)
+
 ; function used to increase depth in dis search
 (define (deepining frontier levels complete-path visited current-depth deepness)
     (cond
         ((equal? deepness 1) (list (car (car frontier)) '()))
-        ((> current-depth deepness) #f)
-    )
-    (let ((found (dis-helper frontier levels complete-path visited current-depth deepness)))
-        (cond
-            (found found)
-            (#t (deepining frontier levels complete-path visited (+ 1 current-depth) deepness))        
-        )
+        ((equal? current-depth deepness) #f)
+        (#t (dis-iteration frontier levels complete-path visited current-depth deepness))
     )
 )
 
