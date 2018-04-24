@@ -102,11 +102,11 @@
 ;--------------------------------------------------------------------
 
 ; checks to see if an item 'a' is in a list
-(define (exists? a alist)
+(define (exists? alist a)
     (cond
         ((null? alist) #f)
         ((equal? a (car alist)) #t)
-        (#t (exists? a (cdr alist)))
+        (#t (exists? (cdr alist) a))
     )
 )
 
@@ -116,8 +116,8 @@
 (define (find-adjacentcy a b alist) 
     (cond
         ((null? alist) #f)
-        ((equal? (car (car alist)) a) (exists? b (cdr (car alist))))
-        ((equal? (car (car alist)) b) (exists? a (cdr (car alist))))
+        ((equal? (car (car alist)) a) (exists? (cdr (car alist)) b))
+        ((equal? (car (car alist)) b) (exists? (cdr (car alist)) a))
         (#t (find-adjacentcy a b (cdr alist)))
     )
 )
@@ -156,9 +156,9 @@
 (define (unvisited alist visited)
   
     (cond
-        ((and (null? (cdr alist)) (not (contains? visited (car (car alist))))) alist)
+        ((and (null? (cdr alist)) (not (exists? visited (car (car alist))))) alist)
         ((null? (cdr alist)) '())
-        ((not (contains? visited (car (car alist)))) (cons (car alist) (unvisited (cdr alist) visited)))
+        ((not (exists? visited (car (car alist)))) (cons (car alist) (unvisited (cdr alist) visited)))
         (#t (unvisited (cdr alist) visited))    
     )
 )
@@ -199,7 +199,7 @@
         ((is-goal-state? (car (car frontier))) (list (car (car frontier)) (reverse-path (cdr (car frontier)) complete-path)))
 
         ;Expand leftmost child element if it has not been visited yet as well as add it to visited list 
-        ((and (not (equal? current-depth deepness)) (not (contains? visited (car (car frontier))))) (id-dfs-helper (get-children (car (car frontier))) (cons (cdr frontier) levels) (cons (cdr (car frontier)) complete-path) (cons (car (car frontier)) visited) (+ 1 current-depth) deepness))
+        ((and (not (equal? current-depth deepness)) (not (exists? visited (car (car frontier))))) (id-dfs-helper (get-children (car (car frontier))) (cons (cdr frontier) levels) (cons (cdr (car frontier)) complete-path) (cons (car (car frontier)) visited) (+ 1 current-depth) deepness))
         
         ;If we are not at designated depth yet and the leftmost element has already been visited, move to the next element to the right on the same level
         ((not (equal? current-depth deepness)) (id-dfs-helper (cdr frontier) levels complete-path visited current-depth deepness)) 
@@ -247,8 +247,9 @@
 ; Basically, I found the location with the minimum amount of adjacencies and always preferenced the states that resulted with this location being in the 
 ; front of the list. Besides the preferencing of these child states, my algorithm performs like my original id-dfs. 
 
+;--------------------------------------------------------------------------------------
 
-
+; function used to figure out size of a location's adjacency list
 (define (adjacency-size-helper element adjacencies)
     (cond
         ((equal? (car (car adjacencies)) element) (list-size (car adjacencies)))
@@ -256,9 +257,13 @@
     )
 )
 
+; wrapper for finding length of a location's adjacency list
 (define (adjacency-size element) (adjacency-size-helper element adjacency-map))
 
 
+;--------------------------------------------------------------------------------------
+
+; find the location with the minimum number of adjacencies
 (define (find-min-adjacencies-helper alist min)
     (cond
         ((null? alist) min)
@@ -267,8 +272,12 @@
     )
 )
 
+; wrapper for findin the location with the minimum amount of adjacencies
 (define (find-min-adjacencies alist) (find-min-adjacencies-helper (cdr alist) (car alist)))
 
+;--------------------------------------------------------------------------------------
+
+; function to preference locations with the smallest amount of adjacencies in the first position
 (define (order-children-astar-helper alist min-values rest min)
     (cond
         ((null? alist) (append min-values rest))
@@ -277,9 +286,12 @@
     )
 )
 
+; wrapper for ordering children
 (define (order-children-astar alist min) (order-children-astar-helper alist '() '() min))
 
+;--------------------------------------------------------------------------------------
 
+; function detailing the A* searching algorithm
 (define (A*-helper frontier levels complete-path visited current-depth deepness)    
     (cond
         ;if frontier is ever null, we need to pick a new depth
@@ -289,7 +301,7 @@
         ((is-goal-state? (car (car frontier))) (list (car (car frontier)) (reverse-path (cdr (car frontier)) complete-path)))
 
         ;Expand leftmost child element if it has not been visited yet as well as add it to visited list 
-        ((and (not (equal? current-depth deepness)) (not (contains? visited (car (car frontier))))) (A*-helper (order-children-astar (get-children (car (car frontier))) (find-min-adjacencies (car (car frontier)))) (cons (cdr frontier) levels) (cons (cdr (car frontier)) complete-path) (cons (car (car frontier)) visited) (+ 1 current-depth) deepness))
+        ((and (not (equal? current-depth deepness)) (not (exists? visited (car (car frontier))))) (A*-helper (order-children-astar (get-children (car (car frontier))) (find-min-adjacencies (car (car frontier)))) (cons (cdr frontier) levels) (cons (cdr (car frontier)) complete-path) (cons (car (car frontier)) visited) (+ 1 current-depth) deepness))
         
         ;If we are not at designated depth yet and the leftmost element has already been visited, move to the next element to the right on the same level
         ((not (equal? current-depth deepness)) (A*-helper (cdr frontier) levels complete-path visited current-depth deepness)) 
